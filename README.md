@@ -2,6 +2,9 @@
 
 This is a simple yet powerful unit conversion application built using Python and Tkinter. It allows users to convert between various units across different categories such as temperature, length, mass, time, and more.
 
+![image](https://github.com/user-attachments/assets/ec78c929-56c5-40fb-94cc-0a82bb7edead)
+
+
 ## Features
 - **Unit Categories**: 
   - Base: Binary, Octal, Decimal, Hexadecimal
