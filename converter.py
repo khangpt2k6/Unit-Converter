@@ -9,10 +9,10 @@ class UnitConverter:
         self.root.geometry("500x400")
         self.root.resizable(False, False)
         
+        # Configure styles for a modern look
         style = ttk.Style()
-        style.theme_use("clam")  # Use a modern theme
+        style.theme_use("clam")
         
-        # Configure styles
         style.configure("TFrame", background="#f5f5f5")
         style.configure("TButton", font=("Arial", 10, "bold"), background="#007bff", foreground="white")
         style.map("TButton", background=[("active", "#0069d9")])
@@ -34,7 +34,7 @@ class UnitConverter:
         
         ttk.Label(category_frame, text="Category:").pack(anchor=tk.W)
         
-        # Categories
+        # Categories and their units
         self.categories = {
             "Base": ["Binary", "Octal", "Decimal", "Hexadecimal"],
             "Time": ["Milliseconds", "Seconds", "Minutes", "Hours", "Days", "Weeks", "Months", "Years"],
@@ -44,7 +44,7 @@ class UnitConverter:
             "Volume": ["Milliliters", "Liters", "Cubic Meters", "Fluid Ounces", "Cups", "Pints", "Quarts", "Gallons"]
         }
         
-        # Create category buttons
+        # Create category radio buttons
         self.category_var = tk.StringVar(value="Length")
         category_buttons_frame = ttk.Frame(category_frame)
         category_buttons_frame.pack(fill=tk.X, pady=5)
@@ -73,24 +73,24 @@ class UnitConverter:
         self.input_value = ttk.Entry(input_frame, width=30)
         self.input_value.grid(row=0, column=1, sticky=tk.W)
         
-        # From and To units
+        # From and To units frame
         units_frame = ttk.Frame(conversion_frame)
         units_frame.pack(fill=tk.X, pady=10)
         
-        # From unit
+        # From unit - FIXED: separate frames for each dropdown
         from_frame = ttk.Frame(units_frame)
-        from_frame.grid(row=0, column=0, padx=(0, 10))
+        from_frame.grid(row=0, column=0, padx=(0, 20), sticky=tk.W)
         
         ttk.Label(from_frame, text="From:").pack(anchor=tk.W)
         self.from_unit = ttk.Combobox(from_frame, width=15, state="readonly")
         self.from_unit.pack(pady=5)
         
-        # To unit
+        # To unit - FIXED: dropdown added to to_frame instead of from_frame
         to_frame = ttk.Frame(units_frame)
-        to_frame.grid(row=0, column=1)
+        to_frame.grid(row=0, column=1, sticky=tk.W)
         
         ttk.Label(to_frame, text="To:").pack(anchor=tk.W)
-        self.to_unit = ttk.Combobox(from_frame, width=15, state="readonly")
+        self.to_unit = ttk.Combobox(to_frame, width=15, state="readonly")  # FIXED HERE
         self.to_unit.pack(pady=5)
         
         # Convert button
@@ -114,16 +114,22 @@ class UnitConverter:
         self.update_units()
     
     def update_units(self):
+        """Update unit dropdown options based on selected category"""
         category = self.category_var.get()
         units = self.categories[category]
         
         self.from_unit['values'] = units
         self.to_unit['values'] = units
         
+        # Set default selections
         self.from_unit.current(0)
         self.to_unit.current(1 if len(units) > 1 else 0)
+        
+        # Clear result
+        self.result_var.set("")
     
     def convert(self):
+        """Perform the unit conversion"""
         try:
             value = self.input_value.get().strip()
             if not value:
@@ -144,21 +150,30 @@ class UnitConverter:
                 
             self.result_var.set(f"Result: {result}")
             
+        except ValueError:
+            self.result_var.set("Error: Invalid input value")
         except Exception as e:
             self.result_var.set(f"Error: {str(e)}")
     
     def convert_base(self, value, from_unit, to_unit):
-        # Convert between number bases
+        """Convert between different number bases"""
         bases = {"Binary": 2, "Octal": 8, "Decimal": 10, "Hexadecimal": 16}
         
-        # First convert to decimal
-        if from_unit == "Hexadecimal":
-            # Handle hexadecimal input with letters
-            decimal = int(value, 16)
-        else:
-            decimal = int(value, bases[from_unit])
+        # Handle input based on base type
+        try:
+            if from_unit == "Hexadecimal":
+                decimal = int(value, 16)
+            elif from_unit == "Binary":
+                value = value.replace(" ", "")  # Allow spaces in binary
+                decimal = int(value, 2)
+            elif from_unit == "Octal":
+                decimal = int(value, 8)
+            else:  # Decimal
+                decimal = int(value)
+        except ValueError:
+            raise ValueError(f"Invalid {from_unit} value")
         
-        # Then convert to target base
+        # Convert to target base
         if to_unit == "Decimal":
             return str(decimal)
         elif to_unit == "Binary":
@@ -169,8 +184,11 @@ class UnitConverter:
             return hex(decimal)[2:].upper()  # Remove '0x' prefix and convert to uppercase
     
     def convert_temperature(self, value, from_unit, to_unit):
-        # Convert temperature
-        value = float(value)
+        """Convert between temperature units"""
+        try:
+            value = float(value)
+        except ValueError:
+            raise ValueError("Temperature must be a number")
         
         # Convert to Celsius first
         if from_unit == "Celsius":
@@ -191,8 +209,11 @@ class UnitConverter:
         return self.format_number(result)
     
     def convert_standard(self, value, category, from_unit, to_unit):
-        # Standard conversion using conversion factors
-        value = float(value)
+        """Standard conversion using conversion factors"""
+        try:
+            value = float(value)
+        except ValueError:
+            raise ValueError("Value must be a number")
         
         # Conversion factors to base unit for each category
         conversion_factors = {
@@ -236,18 +257,18 @@ class UnitConverter:
             }
         }
         
-        # Convert to base unit, then to target unit
+        # Convert to base unit then to target unit
         base_value = value * conversion_factors[category][from_unit]
         result = base_value / conversion_factors[category][to_unit]
         
         return self.format_number(result)
     
     def format_number(self, num):
-        # Format number to remove trailing zeros
+        """Format number to be more readable"""
         if num == int(num):
             return str(int(num))
         else:
-            # Show up to 6 decimal places, removing trailing zeros
+            # Display up to 6 decimal places, removing trailing zeros
             return f"{num:.6f}".rstrip('0').rstrip('.') if '.' in f"{num:.6f}" else f"{num:.6f}"
 
 if __name__ == "__main__":
